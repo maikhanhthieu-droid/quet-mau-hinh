@@ -1,0 +1,210 @@
+{
+  "version": "scanner_v2_taxonomy_lineage_seed_2026_05_15",
+  "lineage_policy": {
+    "required_chain": [
+      "Bulkowski chapter",
+      "extracted source rule",
+      "normalized rule spec",
+      "scanner pattern key",
+      "result payload",
+      "book v2 chapter"
+    ],
+    "activation_rule": "A pattern cannot become official unless every link is present and validated."
+  },
+  "lineage": {
+    "bull_flags": {
+      "bulkowski_chapters": [
+        21
+      ],
+      "source_patterns": [
+        "flags_upward_breakout",
+        "bull_flags"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/bull_flags",
+      "scanner_pattern_key": "v2:bull_flags",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "bull_flags"
+      ],
+      "status": "watchlist_candidate"
+    },
+    "bear_flags": {
+      "bulkowski_chapters": [
+        21
+      ],
+      "source_patterns": [
+        "flags_downward_breakout",
+        "bear_flags"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/bear_flags",
+      "scanner_pattern_key": "v2:bear_flags",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "bear_flags"
+      ],
+      "status": "informational_defensive_candidate"
+    },
+    "double_bottoms": {
+      "bulkowski_chapters": [
+        13,
+        14,
+        15,
+        16
+      ],
+      "source_patterns": [
+        "double_bottoms_adam_adam",
+        "double_bottoms_adam_eve",
+        "double_bottoms_eve_adam",
+        "double_bottoms_eve_eve"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/double_bottoms",
+      "scanner_pattern_key": "v2:double_bottoms",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "double_bottoms"
+      ],
+      "status": "draft"
+    },
+    "double_tops": {
+      "bulkowski_chapters": [
+        17,
+        18,
+        19,
+        20
+      ],
+      "source_patterns": [
+        "double_tops_adam_adam",
+        "double_tops_adam_eve",
+        "double_tops_eve_adam",
+        "double_tops_eve_eve"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/double_tops",
+      "scanner_pattern_key": "v2:double_tops",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "double_tops"
+      ],
+      "status": "draft"
+    },
+    "head_and_shoulders_bottoms": {
+      "bulkowski_chapters": [
+        24
+      ],
+      "source_patterns": [
+        "head_and_shoulders_bottoms"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/head_and_shoulders_bottoms",
+      "scanner_pattern_key": "v2:head_and_shoulders_bottoms",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "head_and_shoulders_bottoms"
+      ],
+      "status": "draft"
+    },
+    "head_and_shoulders_tops": {
+      "bulkowski_chapters": [
+        26
+      ],
+      "source_patterns": [
+        "head_and_shoulders_tops"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/head_and_shoulders_tops",
+      "scanner_pattern_key": "v2:head_and_shoulders_tops",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "head_and_shoulders_tops"
+      ],
+      "status": "draft"
+    },
+    "triangles_ascending": {
+      "bulkowski_chapters": [
+        47
+      ],
+      "source_patterns": [
+        "triangles_ascending"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/triangles_ascending",
+      "scanner_pattern_key": "v2:triangles_ascending",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "triangles_ascending"
+      ],
+      "status": "draft"
+    },
+    "triangles_descending": {
+      "bulkowski_chapters": [
+        48
+      ],
+      "source_patterns": [
+        "triangles_descending"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/triangles_descending",
+      "scanner_pattern_key": "v2:triangles_descending",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "triangles_descending"
+      ],
+      "status": "draft"
+    },
+    "triangles_symmetrical": {
+      "bulkowski_chapters": [
+        49
+      ],
+      "source_patterns": [
+        "triangles_symmetrical"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/triangles_symmetrical",
+      "scanner_pattern_key": "v2:triangles_symmetrical",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "triangles_symmetrical"
+      ],
+      "status": "draft"
+    },
+    "wedges_falling": {
+      "bulkowski_chapters": [
+        52
+      ],
+      "source_patterns": [
+        "wedges_falling"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/wedges_falling",
+      "scanner_pattern_key": "v2:wedges_falling",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "wedges_falling"
+      ],
+      "status": "draft"
+    },
+    "wedges_rising": {
+      "bulkowski_chapters": [
+        53
+      ],
+      "source_patterns": [
+        "wedges_rising"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/wedges_rising",
+      "scanner_pattern_key": "v2:wedges_rising",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "wedges_rising"
+      ],
+      "status": "draft"
+    },
+    "cup_with_handle": {
+      "bulkowski_chapters": [
+        9
+      ],
+      "source_patterns": [
+        "cup_with_handle"
+      ],
+      "normalized_rule_spec": "scanner/v2/core_patterns.json#/patterns/cup_with_handle",
+      "scanner_pattern_key": "v2:cup_with_handle",
+      "result_payload_contract": "schemas/scanner_v2/result_payload.schema.json",
+      "book_v2_chapters": [
+        "cup_with_handle"
+      ],
+      "status": "draft"
+    }
+  }
+}

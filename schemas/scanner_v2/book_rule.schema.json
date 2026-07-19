@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "book_rule.schema.json",
+  "title": "Scanner V2 Book Rule",
+  "type": "object",
+  "required": [
+    "rule_id",
+    "rule_type",
+    "book_chapter",
+    "source_page",
+    "source_section",
+    "evidence_excerpt",
+    "interpreted_rule",
+    "numeric_threshold",
+    "confidence",
+    "notes_when_ambiguous"
+  ],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule_type": {
+      "type": "string",
+      "enum": [
+        "prior_trend",
+        "pivot_sequence",
+        "trendline_geometry",
+        "shape_geometry",
+        "breakout",
+        "volume",
+        "invalidation"
+      ]
+    },
+    "book_chapter": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source_page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source_pdf_page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source_section": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_excerpt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 180
+    },
+    "interpreted_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "numeric_threshold": {
+      "type": "object",
+      "required": ["operator", "value", "unit"],
+      "properties": {
+        "operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {},
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "notes_when_ambiguous": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

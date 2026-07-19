@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chartpatternscan.local/schemas/book_v2/market_report.schema.json",
+  "title": "Book V2 Market Report Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "top_patterns_by_valid_evals",
+    "top_patterns_by_symbol_count",
+    "top_patterns_by_strength_ex_gaps",
+    "family_prevalence",
+    "candidate_and_watchlist",
+    "pattern_matrix"
+  ],
+  "$defs": {
+    "metricBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "symbol_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "eval_symbol_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "median_move_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "failure_rate_5pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "boundary_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "target_hit_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tbpb_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "patternRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_key",
+        "canonical_key",
+        "family_label",
+        "valid",
+        "calib"
+      ],
+      "properties": {
+        "pattern_key": {
+          "type": "string"
+        },
+        "bulkowski_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "canonical_key": {
+          "type": "string"
+        },
+        "family_label": {
+          "type": "string"
+        },
+        "chapter": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        },
+        "phase3_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strategy_gate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "benchmark_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "valid": {
+          "$ref": "#/$defs/metricBlock"
+        },
+        "calib": {
+          "$ref": "#/$defs/metricBlock"
+        }
+      }
+    },
+    "familyRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_key",
+        "family_label",
+        "pattern_count",
+        "valid_detections",
+        "valid_evals",
+        "calib_detections",
+        "calib_evals",
+        "valid_symbols"
+      ],
+      "properties": {
+        "canonical_key": {
+          "type": "string"
+        },
+        "family_label": {
+          "type": "string"
+        },
+        "pattern_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_symbols": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "properties": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_db",
+        "calib_db",
+        "pattern_count",
+        "family_count",
+        "phase3_status_counts",
+        "benchmark_status_counts"
+      ],
+      "properties": {
+        "valid_db": {
+          "type": "string"
+        },
+        "calib_db": {
+          "type": "string"
+        },
+        "pattern_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "family_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase3_status_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "benchmark_status_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "top_patterns_by_valid_evals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/patternRow"
+      }
+    },
+    "top_patterns_by_symbol_count": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/patternRow"
+      }
+    },
+    "top_patterns_by_strength_ex_gaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/patternRow"
+      }
+    },
+    "family_prevalence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/familyRow"
+      }
+    },
+    "candidate_and_watchlist": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/patternRow"
+      }
+    },
+    "pattern_matrix": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/patternRow"
+      }
+    }
+  }
+}

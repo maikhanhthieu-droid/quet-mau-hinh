@@ -1,0 +1,10 @@
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.8
+jsonschema>=4.22
+pytest>=8.0
+pypdf>=6.0
+reportlab>=4.2
+requests>=2.32,<3
+vnstock==4.0.4
+tzdata>=2026.1

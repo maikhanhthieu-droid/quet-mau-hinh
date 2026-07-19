@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chartpatternscan.local/schemas/book_v2/symbol_profile.schema.json",
+  "title": "Book V2 Symbol Profile Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "top_symbols",
+    "all_symbols",
+    "valid_profiles",
+    "calib_profiles"
+  ],
+  "$defs": {
+    "patternSlice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_key",
+        "canonical_key",
+        "detections",
+        "evals"
+      ],
+      "properties": {
+        "pattern_key": {
+          "type": "string"
+        },
+        "canonical_key": {
+          "type": "string"
+        },
+        "phase3_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strategy_gate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "median_move_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "target_hit_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "familySlice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_key",
+        "detections",
+        "evals"
+      ],
+      "properties": {
+        "canonical_key": {
+          "type": "string"
+        },
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "splitProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "detections",
+        "evals",
+        "non_gap_detections",
+        "non_gap_evals",
+        "pattern_diversity_ex_gaps",
+        "family_diversity_ex_gaps",
+        "top_patterns",
+        "top_patterns_ex_gaps",
+        "top_families",
+        "top_families_ex_gaps"
+      ],
+      "properties": {
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_gap_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_gap_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pattern_diversity_ex_gaps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "family_diversity_ex_gaps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_patterns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patternSlice"
+          }
+        },
+        "top_patterns_ex_gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patternSlice"
+          }
+        },
+        "top_families": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/familySlice"
+          }
+        },
+        "top_families_ex_gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/familySlice"
+          }
+        }
+      }
+    },
+    "combinedSymbolRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "combined_detections",
+        "combined_evals",
+        "combined_non_gap_detections",
+        "combined_non_gap_evals",
+        "combined_pattern_diversity_ex_gaps",
+        "combined_family_diversity_ex_gaps",
+        "top_patterns_ex_gaps_valid",
+        "top_patterns_ex_gaps_calib",
+        "top_families_ex_gaps_valid",
+        "top_families_ex_gaps_calib"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "valid_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_non_gap_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_non_gap_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_non_gap_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calib_non_gap_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_non_gap_detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_non_gap_evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_pattern_diversity_ex_gaps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "combined_family_diversity_ex_gaps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_patterns_ex_gaps_valid": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patternSlice"
+          }
+        },
+        "top_patterns_ex_gaps_calib": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/patternSlice"
+          }
+        },
+        "top_families_ex_gaps_valid": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/familySlice"
+          }
+        },
+        "top_families_ex_gaps_calib": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/familySlice"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_run_id",
+        "calib_run_id",
+        "symbol_count",
+        "top_n"
+      ],
+      "properties": {
+        "valid_run_id": {
+          "type": "string"
+        },
+        "calib_run_id": {
+          "type": "string"
+        },
+        "symbol_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_n": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "top_symbols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/combinedSymbolRow"
+      }
+    },
+    "all_symbols": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/combinedSymbolRow"
+      }
+    },
+    "valid_profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/splitProfile"
+      }
+    },
+    "calib_profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/splitProfile"
+      }
+    }
+  }
+}

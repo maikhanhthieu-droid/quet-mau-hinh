@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chartpatternscan.local/schemas/book_v2/current_outlook.schema.json",
+  "title": "Book V2 Current Outlook Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "current_patterns",
+    "historical_context",
+    "conditional_outlook",
+    "actionability"
+  ],
+  "$defs": {
+    "currentPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_key",
+        "canonical_key"
+      ],
+      "properties": {
+        "pattern_key": {
+          "type": "string"
+        },
+        "canonical_key": {
+          "type": "string"
+        },
+        "variant_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase3_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strategy_gate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "breakout_side": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "detected_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "breakout_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "variant_confidence": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "family_metrics": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "properties": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "as_of_date",
+        "pattern_set"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "as_of_date": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pattern_set": {
+          "type": "string"
+        },
+        "price_db": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "current_patterns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/currentPattern"
+      }
+    },
+    "historical_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "symbol_history": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "market_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "matched_cohort": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "conditional_outlook": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expected_move_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "target_hit_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "failure_risk_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "boundary_invalidation_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "timing_notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "actionability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lane": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use_case": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cautions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

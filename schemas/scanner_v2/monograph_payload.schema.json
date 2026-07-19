@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "monograph_payload.schema.json",
+  "title": "Scanner V2 Monograph Payload",
+  "type": "object",
+  "required": [
+    "generated_at",
+    "pattern_key",
+    "display_name",
+    "source_alignment",
+    "scanner_contract",
+    "rules",
+    "market_data",
+    "statistics",
+    "methodology_status",
+    "statistics_contract_status",
+    "chapter_framework_status",
+    "release_gate_status"
+  ],
+  "properties": {
+    "generated_at": {"type": "string"},
+    "pattern_key": {"type": "string"},
+    "display_name": {"type": "string"},
+    "source_alignment": {"type": "object"},
+    "scanner_contract": {
+      "type": "object",
+      "required": ["spec_hash", "coverage", "official_ready"],
+      "properties": {
+        "spec_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "coverage": {"type": "array"},
+        "official_ready": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "rules": {"type": "array", "minItems": 1},
+    "market_data": {"type": "object"},
+    "statistics": {"type": "object"},
+    "methodology_status": {
+      "type": "object",
+      "required": ["standard_version", "target", "chapter_lane", "classification", "publish_status", "tradable_setup"],
+      "properties": {
+        "standard_version": {"const": "bulkowski_vietnam_p1_p5_v1"},
+        "target": {"type": "string"},
+        "chapter_lane": {"type": "string"},
+        "classification": {
+          "enum": ["not-usable", "research-only", "watchlist-reference", "investment-reference", "tradable-setup"]
+        },
+        "publish_status": {"enum": ["Hold", "Publish with caveats", "Strong chapter"]},
+        "tradable_setup": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "statistics_contract_status": {
+      "type": "object",
+      "required": ["standard_version", "p0_complete", "p0_missing", "current_tables", "anchor_mode", "required_quantiles"],
+      "properties": {
+        "standard_version": {"const": "bulkowski_vietnam_p1_p5_v1"},
+        "p0_complete": {"type": "boolean"},
+        "p0_missing": {"type": "array", "items": {"type": "string"}},
+        "current_tables": {"type": "object"},
+        "anchor_mode": {"type": "string"},
+        "required_quantiles": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "chapter_framework_status": {
+      "type": "object",
+      "required": ["standard_version", "score", "classification", "hard_gate_caps", "required_figures", "current_required_figures_coverage"],
+      "properties": {
+        "standard_version": {"const": "bulkowski_vietnam_p1_p5_v1"},
+        "score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "classification": {
+          "enum": ["not-usable", "research-only", "watchlist-reference", "investment-reference", "tradable-setup"]
+        },
+        "hard_gate_caps": {"type": "array", "items": {"type": "string"}},
+        "required_figures": {"type": "array", "items": {"type": "string"}},
+        "current_required_figures_coverage": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "release_gate_status": {
+      "type": "object",
+      "required": [
+        "standard_version",
+        "classification",
+        "publish_status",
+        "chapter_score",
+        "p0_missing",
+        "high_severity_failures",
+        "checks",
+        "allowed_claim"
+      ],
+      "properties": {
+        "standard_version": {"const": "bulkowski_vietnam_p1_p5_v1"},
+        "classification": {
+          "enum": ["not-usable", "research-only", "watchlist-reference", "investment-reference", "tradable-setup"]
+        },
+        "publish_status": {"enum": ["Hold", "Publish with caveats", "Strong chapter"]},
+        "chapter_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "p0_missing": {"type": "array", "items": {"type": "string"}},
+        "high_severity_failures": {"type": "array", "items": {"type": "string"}},
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["check_id", "label", "severity", "passed", "action", "detail"],
+            "properties": {
+              "check_id": {"type": "string"},
+              "label": {"type": "string"},
+              "severity": {"enum": ["Critical", "High", "Medium", "Low"]},
+              "passed": {"type": "boolean"},
+              "action": {"type": "string"},
+              "detail": {"type": "string"}
+            },
+            "additionalProperties": true
+          }
+        },
+        "allowed_claim": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

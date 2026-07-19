@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.python-version
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / tooling
+.idea/
+.vscode/
+
+# iCloud / local assistants
+.claude/
+
+# Local data (do not commit)
+*.db
+*.sqlite
+scan_results/
+artifacts/
+references/
+.venv_pdf/
+.tmp/
+data/
+
+# Source materials (do not commit)
+*.pdf
+
+# Bulk extracted/digitized content (keep private unless you have rights to distribute)
+extraction_phase_1/
+EXTRACTION_COMPLETE.txt
+EXTRACTION_REPORT.md
+PHASE1_COMPLETE.txt
+PHASE1_EXTRACTION_SUMMARY.md
+final_summary.txt
+quick_reference_guide.json
+
+# Large generated artifacts
+complete_extraction_phase1.json
+chart_patterns_encyclopedia_extraction.json
+chart_patterns_detection_rules.json
+chart_patterns_detailed_statistics.json

@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chartpatternscan.local/schemas/book_v2/pattern_monograph.schema.json",
+  "title": "Book V2 Pattern Monograph Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "reference",
+    "governance",
+    "benchmark",
+    "vietnam_prevalence",
+    "vietnam_outcomes",
+    "representative_cases",
+    "symbol_tendencies"
+  ],
+  "$defs": {
+    "splitMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "detections",
+        "evals",
+        "symbol_count"
+      ],
+      "properties": {
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "symbol_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "outcomeMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "median_move_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "failure_rate_5pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "boundary_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "target_hit_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tbpb_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "caseRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "split"
+      ],
+      "properties": {
+        "pattern_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "split": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "calib"
+          ]
+        },
+        "breakout_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pattern_variant": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quality_label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outcome": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mfe_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "mae_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "formation_start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "formation_end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "breakout_direction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_price": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "stop_loss_price": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pivot_indices": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "image_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "symbolRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "detections",
+        "evals"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string"
+        },
+        "detections": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "median_move_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "target_hit_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "properties": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pattern_key",
+        "canonical_key",
+        "bulkowski_name"
+      ],
+      "properties": {
+        "pattern_key": {
+          "type": "string"
+        },
+        "canonical_key": {
+          "type": "string"
+        },
+        "bulkowski_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bulkowski_chapter": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "generated_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bulkowski_reference",
+        "detector_interpretation",
+        "variant_scope"
+      ],
+      "properties": {
+        "bulkowski_reference": {
+          "type": "string"
+        },
+        "detector_interpretation": {
+          "type": "string"
+        },
+        "variant_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase3_status",
+        "strategy_gate",
+        "book_v2_readiness",
+        "readiness_flags"
+      ],
+      "properties": {
+        "phase3_status": {
+          "type": "string"
+        },
+        "strategy_gate": {
+          "type": "string"
+        },
+        "family_action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "book_v2_readiness": {
+          "type": "string",
+          "enum": [
+            "core_research_chapter",
+            "thin_research_chapter",
+            "strategy_appendix",
+            "reference_only"
+          ]
+        },
+        "readiness_flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "benchmark_status"
+      ],
+      "properties": {
+        "benchmark_status": {
+          "type": "string"
+        },
+        "bulkowski_baseline": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "vietnam_observed": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "delta_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "vietnam_prevalence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "calib"
+      ],
+      "properties": {
+        "valid": {
+          "$ref": "#/$defs/splitMetrics"
+        },
+        "calib": {
+          "$ref": "#/$defs/splitMetrics"
+        }
+      }
+    },
+    "vietnam_outcomes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid",
+        "calib"
+      ],
+      "properties": {
+        "valid": {
+          "$ref": "#/$defs/outcomeMetrics"
+        },
+        "calib": {
+          "$ref": "#/$defs/outcomeMetrics"
+        }
+      }
+    },
+    "representative_cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/caseRow"
+      }
+    },
+    "symbol_tendencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/symbolRow"
+      }
+    }
+  }
+}

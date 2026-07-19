@@ -1,0 +1,196 @@
+{
+  "manifest_version": "pattern_family_manifest_v1",
+  "active_reference_family": "flag_family",
+  "source_grounding_policy": {
+    "policy_id": "source_grounded_publication_gate_v1",
+    "doc": "docs/project/source-grounded-publication-gate.md",
+    "principle": "Read Bulkowski source first, write source contract second, then scanner/PDF. Shared code may cover statistics/rendering only; geometry, target, quality and narrative remain family/pattern/variant-specific.",
+    "final_gate": "source_notes.status PASS, at least 6 source_rules, and no high/medium source-grounding issues before final publication"
+  },
+  "publication_semantic_policy": {
+    "policy_id": "publication_semantic_gate_v1",
+    "doc": "docs/project/publication-semantic-gate.md",
+    "principle": "A final public chapter must have a dedicated publication spec and must read like an investor-facing chapter, not an internal rendered payload.",
+    "final_gate": "publication_spec.status PASS, no raw source-rule text, no internal terms, and no generic_family spec for pattern/variant finals",
+    "promotion_script": "scanner/promote_final_chapter.py"
+  },
+  "families": {
+    "flag_family": {
+      "status": "active",
+      "patterns": {
+        "bull_flags": {
+          "status": "active",
+          "chapter_lane": "watchlist/investment-reference under available-series scope",
+          "source_chapters": [21],
+          "detector_module": "scanner.v2.bull_flags",
+          "data_runner": "scanner.v2.bull_flags_monograph",
+          "public_chapter_builder": "scanner.flag_family_public_chapter_factory"
+        },
+        "bear_flags": {
+          "status": "active",
+          "chapter_lane": "informational/defensive-reference under available-series scope",
+          "source_chapters": [21],
+          "detector_module": "scanner.v2.bull_flags",
+          "data_runner": "scanner.v2.bear_flags_monograph",
+          "public_chapter_builder": "scanner.flag_family_public_chapter_factory"
+        }
+      }
+    },
+    "flag_like_family": {
+      "status": "active_candidate",
+      "source_grounding_required": true,
+      "source_grounding_policy_id": "source_grounded_publication_gate_v1",
+      "family_rule": "Flags, Pennants, and High-and-Tight Flags share continuation statistics only. Geometry, target calibration, quality tiers, and narrative remain pattern-specific.",
+      "patterns": {
+        "bull_pennants": {
+          "status": "publication_final",
+          "chapter_lane": "watchlist-reference under available-series scope",
+          "source_chapters": [34],
+          "detector_module": "scanner.v2.pennants",
+          "data_runner": "scanner.v2.pennants",
+          "audit_runner": "scanner.audit_flag_like_family_source_grounding",
+          "public_chapter_builder": "scanner.build_bull_pennant_public_chapter",
+          "quality_gate": "Converging trendline body, steep prior advance, close breakout, calibrated target bands, and manual visual review before any final promotion"
+        },
+        "bear_pennants": {
+          "status": "publication_final",
+          "chapter_lane": "defensive/informational-reference under available-series scope",
+          "source_chapters": [34],
+          "detector_module": "scanner.v2.pennants",
+          "data_runner": "scanner.v2.pennants",
+          "audit_runner": "scanner.audit_flag_like_family_source_grounding",
+          "public_chapter_builder": "scanner.build_bear_pennant_public_chapter",
+          "quality_gate": "Converging trendline body, steep prior decline, close breakout, calibrated target bands, and manual visual review before any final promotion"
+        },
+        "high_tight_flags": {
+          "status": "publication_final",
+          "chapter_lane": "watchlist-reference under available-series scope",
+          "source_chapters": [22],
+          "detector_module": "scanner.v2.high_tight_flags",
+          "data_runner": "scanner.v2.high_tight_flags",
+          "audit_runner": "scanner.audit_flag_like_family_source_grounding",
+          "public_chapter_builder": "scanner.build_high_tight_flag_public_chapter",
+          "quality_gate": "Dedicated detector must require near-doubling in under two months, short high consolidation, upward breakout, and half-prior-move target logic"
+        }
+      }
+    },
+    "triangle_family": {
+      "status": "active_candidate",
+      "family_rule": "Reuse only the shared statistical/publication core. Keep scanner geometry, target calibration, quality tiers, and example policy pattern-specific.",
+      "patterns": {
+        "triangles_ascending": {
+          "status": "publication_candidate",
+          "chapter_lane": "investment-reference candidate under available-series public-grade scope",
+          "source_chapters": [47],
+          "detector_module": "scanner.v2.ascending_triangles",
+          "data_runner": "scanner.v2.ascending_triangles",
+          "audit_runner": "scanner.run_triangle_publication_quality_audit",
+          "public_chapter_builder": "scanner.build_triangle_family_public_chapters",
+          "release_gate": "scanner.validate_triangle_family_release_candidate",
+          "quality_gate": "premium visual validation scored_n >= 30, median >= 4, pass_rate >= 70"
+        },
+        "triangles_descending": {
+          "status": "branch_headline_candidate",
+          "chapter_lane": "defensive/informational reference candidate; headline scope must be branch-filtered, not aggregate",
+          "source_chapters": [48],
+          "detector_module": "scanner.v2.descending_triangles",
+          "data_runner": "scanner.v2.descending_triangles",
+          "audit_runner": "scanner.run_triangle_publication_quality_audit",
+          "branch_candidate_runner": "scanner.analyze_descending_triangle_branch_candidates",
+          "public_chapter_builder": null,
+          "quality_gate": "premium visual validation pass; branch headline required because aggregate MFE/MAE is weak"
+        },
+        "triangles_symmetrical": {
+          "status": "branch_headline_candidate",
+          "chapter_lane": "watchlist-reference branch candidate; headline scope must be direction-filtered, not aggregate",
+          "source_chapters": [49],
+          "detector_module": "scanner.v2.symmetrical_triangles",
+          "data_runner": "scanner.v2.symmetrical_triangles",
+          "audit_runner": "scanner.run_triangle_publication_quality_audit",
+          "branch_candidate_runner": "scanner.analyze_symmetrical_triangle_branch_candidates",
+          "public_chapter_builder": "scanner.build_symmetrical_triangle_public_chapter",
+          "quality_gate": "direction-first headline required; current public chapter uses up breakout x mid liquidity x premium/standard because aggregate up/down is invalid"
+        }
+      }
+    },
+    "double_pattern_family": {
+      "status": "active_candidate",
+      "source_grounding_required": true,
+      "source_grounding_policy_id": "source_grounded_publication_gate_v1",
+      "family_rule": "Reuse only the shared statistical/publication core. Keep reversal geometry, neckline confirmation, Adam/Eve variant logic, target rules, and example policy pattern/variant-specific.",
+      "variant_order": ["AA", "AE", "EA", "EE"],
+      "patterns": {
+        "double_bottoms_adam_adam": {
+          "status": "candidate_built_review_required",
+          "chapter_lane": "watchlist-reference candidate under available-series scope",
+          "source_chapters": [13],
+          "detector_module": "scanner.v2.double_patterns",
+          "public_chapter_builder": "scanner.build_double_pattern_variant_public_chapter",
+          "quality_gate": "source-grounded variant contract required before any final promotion"
+        },
+        "double_bottoms_adam_eve": {
+          "status": "next_source_grounded_variant",
+          "chapter_lane": "watchlist-reference candidate under available-series scope",
+          "source_chapters": [14],
+          "detector_module": "scanner.v2.double_patterns",
+          "public_chapter_builder": "scanner.build_double_pattern_variant_public_chapter",
+          "quality_gate": "Chapter 14 source contract required; no inherited Adam & Adam source wording"
+        },
+        "double_bottoms_eve_adam": {
+          "status": "pending",
+          "chapter_lane": "watchlist-reference candidate under available-series scope",
+          "source_chapters": [15],
+          "detector_module": "scanner.v2.double_patterns",
+          "public_chapter_builder": "scanner.build_double_pattern_variant_public_chapter",
+          "quality_gate": "source contract before scan/render"
+        },
+        "double_bottoms_eve_eve": {
+          "status": "pending",
+          "chapter_lane": "watchlist-reference candidate under available-series scope",
+          "source_chapters": [16],
+          "detector_module": "scanner.v2.double_patterns",
+          "public_chapter_builder": "scanner.build_double_pattern_variant_public_chapter",
+          "quality_gate": "source contract before scan/render"
+        }
+      }
+    },
+    "wedge_family": {
+      "status": "active_candidate",
+      "source_grounding_required": true,
+      "source_grounding_policy_id": "source_grounded_publication_gate_v1",
+      "family_rule": "Reuse only the shared statistical/publication core. Keep wedge geometry, same-direction converging trendlines, breakout side, target calibration, quality tiers, and example policy pattern-specific.",
+      "patterns": {
+        "wedges_falling": {
+          "status": "in_progress",
+          "chapter_lane": "watchlist-reference candidate under available-series scope",
+          "source_chapters": [52],
+          "detector_module": "scanner.v2.falling_wedges",
+          "data_runner": "scanner.v2.falling_wedges",
+          "audit_runner": "scanner.run_triangle_publication_quality_audit",
+          "public_chapter_builder": "scanner.build_wedge_family_public_chapters",
+          "quality_gate": "source-grounded Wedge contract and public-grade statistical gate before final promotion"
+        },
+        "wedges_rising": {
+          "status": "in_progress",
+          "chapter_lane": "defensive/informational reference candidate under available-series scope",
+          "source_chapters": [53],
+          "detector_module": "scanner.v2.rising_wedges",
+          "data_runner": "scanner.v2.rising_wedges",
+          "audit_runner": "scanner.run_triangle_publication_quality_audit",
+          "public_chapter_builder": "scanner.build_wedge_family_public_chapters",
+          "quality_gate": "source-grounded Wedge contract and public-grade statistical gate before final promotion"
+        }
+      }
+    }
+  },
+  "retired_active_v2_patterns": {
+    "broadening_bottoms": {
+      "status": "retired_from_active_v2_lane",
+      "reason": "Outdated V2 logic is no longer the standard for matrix-based pattern expansion."
+    }
+  },
+  "legacy_modules": {
+    "scanner.digitized_pattern_engine": "legacy benchmark/exploration only",
+    "scanner.pattern_set_metadata": "legacy metadata support only"
+  }
+}
