@@ -91,3 +91,37 @@ def test_alias_and_canonical_name_share_one_circuit() -> None:
     )
     pool: SourcePool[str] = SourcePool(config)
     assert list(pool.states) == ["DNSE"]
+
+
+def test_request_attempts_retries_same_source_after_short_cooldown() -> None:
+    clock = FakeClock()
+    config = LiveScanConfig.from_env(
+        {
+            "SCAN_API_SOURCES": "KBS",
+            "SCAN_REQUEST_ATTEMPTS": "3",
+            "SCAN_REQUEST_JITTER_MIN_SEC": "0",
+            "SCAN_REQUEST_JITTER_MAX_SEC": "0",
+            "SCAN_SOURCE_ERROR_COOLDOWN_MIN_SEC": "1",
+            "SCAN_SOURCE_ERROR_COOLDOWN_MAX_SEC": "1",
+            "SCAN_SOURCE_RECOVER_AFTER_SEC": "5",
+            "SCAN_RETRY_AFTER_MAX_SEC": "10",
+        }
+    )
+    pool: SourcePool[str] = SourcePool(
+        config,
+        monotonic=clock.monotonic,
+        sleeper=clock.sleep,
+    )
+    calls = 0
+
+    def operation(source: str) -> str:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise ConnectionError("temporary")
+        return source
+
+    value, source = pool.call(operation)
+    assert value == source == "KBS"
+    assert calls == 3
+    assert clock.now >= 6

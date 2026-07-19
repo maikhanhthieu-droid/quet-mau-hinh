@@ -48,3 +48,30 @@ def test_upsert_and_outbox_are_idempotent(tmp_path) -> None:
     store.mark_sent(pending)
     assert store.pending_candidates(date(2026, 7, 17)) == []
     store.quick_check()
+
+
+def test_cutoff_queries_and_provider_switch_replace_history(tmp_path) -> None:
+    store = LiveScanStore(tmp_path / "state.sqlite")
+    older = _bars(10.0)
+    newer = _bars(12.0)
+    newer["time"] = pd.Timestamp("2026-07-18")
+    newer["source"] = "VCI"
+    store.upsert_bars(older)
+    store.upsert_bars(newer)
+
+    assert store.latest_date("FPT") == date(2026, 7, 18)
+    assert (
+        store.latest_date("FPT", on_or_before=date(2026, 7, 17))
+        == date(2026, 7, 17)
+    )
+    assert (
+        store.latest_source("FPT", on_or_before=date(2026, 7, 17))
+        == "KBS"
+    )
+
+    replacement = _bars(11.0)
+    replacement["source"] = "VCI"
+    assert store.replace_symbol_history(replacement) == 1
+    loaded = store.load_symbol("FPT")
+    assert len(loaded) == 1
+    assert loaded.iloc[0]["source"] == "VCI"

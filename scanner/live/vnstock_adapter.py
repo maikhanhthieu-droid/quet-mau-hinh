@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import logging
 from datetime import date
 from typing import Any, Iterable
@@ -9,7 +11,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from .config import canonical_source
-from .source_pool import SourceNeutralError
+from .source_pool import SourceNeutralError, safe_exception_summary
 
 
 LOGGER = logging.getLogger(__name__)
@@ -46,8 +48,21 @@ class VnstockAdapter:
                 "Không có VNSTOCK_API_KEY; vnstock sẽ dùng hạn mức khách"
             )
             return
-        # vnstock masks the key in its own output.  Never log the raw value.
-        if not self._register_user(api_key=self.api_key):
+        # vnstock currently prints partial key fragments during registration.
+        # Suppress vendor stdout/stderr so even fragments never reach CI logs.
+        sink = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+                registered = self._register_user(api_key=self.api_key)
+        except Exception as exc:  # noqa: BLE001 - vendor exceptions vary
+            raise VnstockAdapterError(
+                "Không đăng ký được VNSTOCK_API_KEY "
+                f"({safe_exception_summary(exc)})"
+            ) from None
+        finally:
+            sink.seek(0)
+            sink.truncate(0)
+        if not registered:
             raise VnstockAdapterError("Không đăng ký được VNSTOCK_API_KEY")
 
     def source_support(self, source: str) -> tuple[bool, str | None]:
@@ -58,7 +73,7 @@ class VnstockAdapter:
             quote = self._Quote(symbol="FPT", source=source, show_log=False)
             provider_name = type(quote.provider).__module__
         except Exception as exc:  # noqa: BLE001 - vnstock provider errors vary
-            result = (False, f"{type(exc).__name__}: {exc}")
+            result = (False, safe_exception_summary(exc))
         else:
             result = (True, provider_name)
         self._supported_cache[source] = result
@@ -82,18 +97,19 @@ class VnstockAdapter:
         if not ok:
             raise UnsupportedVnstockSource(f"{source}: {detail}")
         listing = self._Listing(source=source, show_log=False)
-        raw = listing.symbols_by_group(group="VN100")
+        # Call the provider directly so SourcePool, rather than vnstock's
+        # hidden Tenacity wrapper, owns retry and quota behavior.
+        raw = listing.provider.symbols_by_group(
+            group="VN100",
+            show_log=False,
+        )
         symbols = self._extract_symbols(raw)
-        if len(symbols) < 80:
-            raise VnstockAdapterError(
-                f"Nguồn {source} chỉ trả về {len(symbols)} mã VN100; "
-                "dừng để tránh quét nhầm universe"
-            )
         if len(symbols) != 100:
-            LOGGER.warning(
-                "Danh sách VN100 từ %s có %d mã (dự kiến 100)", source, len(symbols)
+            raise VnstockAdapterError(
+                f"Nguồn {source} trả về {len(symbols)} mã VN100; "
+                "yêu cầu đúng 100 mã unique"
             )
-        return symbols[:100]
+        return symbols
 
     @staticmethod
     def _extract_symbols(raw: Any) -> list[str]:

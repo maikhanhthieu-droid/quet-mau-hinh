@@ -17,8 +17,9 @@ actual OHLCV adapter is installed. The safe default is `SCAN_API_SOURCES=VCI,KBS
 ## Local run
 
 1. Revoke the credentials that were pasted into chat and create replacements.
-2. Copy `.env.example` to `.env`, fill only the replacement values, and do not
-   commit `.env`.
+2. Load replacement values through your operating-system secret manager or
+   process environment. The CLI does not automatically read `.env`; never put
+   a replacement value in a committed file.
 3. Install dependencies:
 
    ```powershell
@@ -55,8 +56,13 @@ capacity. Requests are shuffled, jittered, rate-limited per source, and
 failed sources enter a randomized cooldown/circuit before failover.
 
 Telegram requires the chat ID separately: send `/start` to the bot, then obtain
-the ID using a private setup step. Never put a bot token in a URL, log, report,
-or source file.
+the ID with `python tools/telegram_chat_id.py`; its prompt hides the token.
+Never put a bot token in a URL, log, report, shell history, or source file.
+
+After setting the two Telegram GitHub Secrets, manually run the
+`Telegram smoke test` workflow. It sends one fixed private message without
+checking out repository code, installing packages, scanning VN100, or loading
+the VNStock/Gemini secrets.
 
 Gemini is optional and only rewrites deterministic scanner facts. If it is
 missing, unavailable, or rate-limited, the local Vietnamese template is sent.

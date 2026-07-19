@@ -22,11 +22,11 @@ từ biến môi trường/GitHub Secrets.
 Mở bot, nhấn Start hoặc gửi `/start`. Sau đó chạy cục bộ:
 
 ```powershell
-$env:TELEGRAM_BOT_TOKEN="TOKEN_MOI"
 python tools/telegram_chat_id.py
 ```
 
-Lưu số nhận được làm `TELEGRAM_CHAT_ID`.
+Công cụ sẽ hỏi token bằng ô nhập ẩn, không ghi token vào lịch sử PowerShell. Lưu
+số nhận được làm `TELEGRAM_CHAT_ID`.
 
 ## 3. Tạo GitHub Secrets
 
@@ -39,6 +39,10 @@ và tạo bốn repository secrets:
 - `GEMINI_API_KEY` (tùy chọn)
 
 Không đặt khóa vào Actions Variables; Variables chỉ dùng cho cấu hình không bí mật.
+
+Sau khi tạo hai secret Telegram, vào tab **Actions → Telegram smoke test → Run
+workflow**. Workflow này chỉ gửi một tin cố định để kiểm tra kết nối; nó không tải
+code, không cài package, không quét VN100 và không đọc khóa VNStock/Gemini.
 
 ## 4. Nguồn dữ liệu và quota
 
@@ -98,9 +102,10 @@ python -m scanner.run_vn100_nightly_scan --mode incremental
 ## 7. Kết quả
 
 - SQLite: `data/vn100_ohlcv.sqlite`
-- JSON: `artifacts/live_scan/latest/report.json`
-- CSV: `artifacts/live_scan/latest/candidates.csv`
-- Báo cáo: `artifacts/live_scan/latest/report.md`
+- JSON: `artifacts/live_scan/latest/signals.json`
+- CSV: `artifacts/live_scan/latest/signals.csv`
+- Báo cáo: `artifacts/live_scan/latest/signals.md`
+- Metadata: `artifacts/live_scan/latest/run_metadata.json`
 - Nội dung Telegram: `artifacts/live_scan/latest/telegram_message.txt`
 
 Các mẫu ban đầu gồm nền phẳng, tam giác tăng, tam giác cân, cờ tăng và co hẹp

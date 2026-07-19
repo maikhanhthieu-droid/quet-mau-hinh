@@ -1,0 +1,93 @@
+name: Telegram smoke test
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: telegram-smoke-test
+  cancel-in-progress: false
+
+jobs:
+  send:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Send fixed private test message
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import urllib.error
+          import urllib.request
+
+          token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+          chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+          if not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]+", token):
+              print(
+                  "Telegram smoke test: token secret missing/invalid.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(2)
+          if not re.fullmatch(r"-?[0-9]+", chat_id):
+              print(
+                  "Telegram smoke test: chat-id secret missing/invalid.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(2)
+
+          body = json.dumps(
+              {
+                  "chat_id": chat_id,
+                  "text": (
+                      "✅ Telegram smoke test thành công. "
+                      "Quetchart bot đã kết nối đúng chat."
+                  ),
+                  "disable_notification": True,
+                  "disable_web_page_preview": True,
+                  "protect_content": True,
+              }
+          ).encode("utf-8")
+          request = urllib.request.Request(
+              f"https://api.telegram.org/bot{token}/sendMessage",
+              data=body,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  status = response.status
+                  raw = response.read(4096)
+          except urllib.error.HTTPError as exc:
+              print(
+                  f"Telegram smoke test failed (HTTP {exc.code}).",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1) from None
+          except Exception:
+              print(
+                  "Telegram smoke test failed (network error).",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1) from None
+          try:
+              ok = status == 200 and json.loads(raw).get("ok") is True
+          except (ValueError, TypeError, AttributeError):
+              ok = False
+          if not ok:
+              print(
+                  "Telegram smoke test failed (invalid API response).",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+          print("Telegram smoke test sent successfully.")
+          PY

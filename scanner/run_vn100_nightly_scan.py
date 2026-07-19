@@ -18,6 +18,7 @@ import secrets
 import sys
 import time
 import uuid
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -32,12 +33,16 @@ if str(ROOT) not in sys.path:
 
 from scanner.live.config import LiveScanConfig  # noqa: E402
 from scanner.live.contracts import validate_candidates  # noqa: E402
-from scanner.live.gemini import GeminiSummarizer  # noqa: E402
+from scanner.live.gemini_summary import build_ai_intro  # noqa: E402
 from scanner.live.patterns import AccumulationConfig, scan_symbol  # noqa: E402
 from scanner.live.reporting import deterministic_message, write_reports  # noqa: E402
-from scanner.live.source_pool import AllSourcesFailed, SourcePool  # noqa: E402
+from scanner.live.source_pool import (  # noqa: E402
+    AllSourcesFailed,
+    SourcePool,
+    safe_exception_summary,
+)
 from scanner.live.storage import LiveScanStore  # noqa: E402
-from scanner.live.telegram import TelegramSender  # noqa: E402
+from scanner.live.telegram import TelegramSendError, TelegramSender  # noqa: E402
 from scanner.live.vnstock_adapter import (  # noqa: E402
     VnstockAdapter,
     VnstockAdapterError,
@@ -62,8 +67,15 @@ def _fetch_one(
     end_date: date,
     config: LiveScanConfig,
     force_bootstrap: bool = False,
-) -> tuple[str, pd.DataFrame | None, str | None]:
-    latest = None if force_bootstrap else store.latest_date(symbol)
+) -> tuple[str, pd.DataFrame | None, str | None, bool]:
+    latest = (
+        None
+        if force_bootstrap
+        else store.latest_date(symbol, on_or_before=end_date)
+    )
+    previous_source = (
+        store.latest_source(symbol, on_or_before=end_date) if latest else None
+    )
     if latest:
         start_date = max(
             date(2000, 1, 1), latest - timedelta(days=config.overlap_calendar_days)
@@ -74,11 +86,30 @@ def _fetch_one(
         frame, source = pool.call(
             lambda selected: adapter.fetch_daily(
                 selected, symbol, start=start_date, end=end_date
-            )
+            ),
+            preferred=previous_source,
         )
-        return symbol, frame, source
+        replace_history = False
+        if latest and previous_source and source != previous_source:
+            # Never splice a short KBS overlap onto a VCI history (or vice
+            # versa). Provider adjustments can differ, so rebuild the complete
+            # detector lookback through one selected source.
+            full_start = end_date - timedelta(
+                days=config.bootstrap_calendar_days
+            )
+            frame, source = pool.call(
+                lambda selected: adapter.fetch_daily(
+                    selected,
+                    symbol,
+                    start=full_start,
+                    end=end_date,
+                ),
+                preferred=source,
+            )
+            replace_history = True
+        return symbol, frame, source, replace_history
     except AllSourcesFailed as exc:
-        return symbol, None, str(exc)
+        return symbol, None, str(exc), False
 
 
 def run_scan(
@@ -88,15 +119,30 @@ def run_scan(
     no_notify: bool = False,
     force_bootstrap: bool = False,
     startup_jitter: bool = False,
+    use_gemini: bool = True,
 ) -> dict[str, Any]:
     run_id = uuid.uuid4().hex
     scan_date = as_of or _date_from_arg(None, config.timezone)
-    adapter = VnstockAdapter(api_key=config.vnstock_api_key)
-    adapter.register()
+    if (
+        not no_notify
+        and not config.telegram_disable_notification
+        and not config.telegram_enabled
+    ):
+        raise ValueError(
+            "Đã yêu cầu gửi thông báo nhưng thiếu "
+            "TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID"
+        )
+    if not no_notify and not config.vnstock_api_key:
+        raise ValueError(
+            "Chạy production cần VNSTOCK_API_KEY; "
+            "chỉ dry-run/--no-notify mới được dùng guest"
+        )
     if startup_jitter and config.startup_jitter_max_sec > 0:
         delay = random.SystemRandom().uniform(0.0, config.startup_jitter_max_sec)
         LOGGER.info("Startup jitter %.1f giây", delay)
         time.sleep(delay)
+    adapter = VnstockAdapter(api_key=config.vnstock_api_key)
+    adapter.register()
     supported, rejected = adapter.supported_sources(config.sources)
     if not supported:
         raise VnstockAdapterError(
@@ -107,12 +153,14 @@ def run_scan(
     for source, reason in rejected.items():
         pool.disable(source, f"vnstock không hỗ trợ OHLCV: {reason}")
 
-    listing_source = "KBS" if "KBS" in supported else supported[0]
-    symbols = adapter.list_vn100(source=listing_source)
-    if len(symbols) > 100:
-        symbols = symbols[:100]
-    if len(symbols) < 80:
-        raise VnstockAdapterError(f"Universe chỉ có {len(symbols)} mã, cần gần 100 mã")
+    symbols, listing_source = pool.call(
+        lambda selected: adapter.list_vn100(source=selected),
+        preferred="KBS" if "KBS" in supported else supported[0],
+    )
+    if len(symbols) != 100:
+        raise VnstockAdapterError(
+            f"Universe phải có đúng 100 mã unique, hiện có {len(symbols)}"
+        )
 
     seed = config.random_seed
     if seed is None:
@@ -146,18 +194,52 @@ def run_scan(
             for future in as_completed(futures):
                 symbol = futures[future]
                 try:
-                    returned_symbol, frame, source_or_error = future.result()
+                    (
+                        returned_symbol,
+                        frame,
+                        source_or_error,
+                        replace_history,
+                    ) = future.result()
                 except Exception as exc:  # noqa: BLE001 - isolate one symbol
-                    errors[symbol] = f"{type(exc).__name__}: {exc}"
+                    errors[symbol] = safe_exception_summary(exc)
                     continue
                 if frame is None:
                     errors[returned_symbol] = str(source_or_error or "rỗng")
                     continue
-                store.upsert_bars(frame)
+                if replace_history:
+                    store.replace_symbol_history(frame)
+                else:
+                    store.upsert_bars(frame)
                 frames[returned_symbol] = frame
                 source_by_symbol[returned_symbol] = str(source_or_error)
 
+        refresh_ratio = len(frames) / len(symbols) if symbols else 0.0
+        if refresh_ratio < config.min_success_ratio:
+            raise VnstockAdapterError(
+                f"Chỉ cập nhật được {len(frames)}/{len(symbols)} mã "
+                f"({refresh_ratio:.1%}), dưới ngưỡng an toàn "
+                f"{config.min_success_ratio:.0%}; không gửi Telegram"
+            )
+
+        # Use the modal last bar among responses rather than MAX(cache), which
+        # could be skewed by one bad/future row or by a replay against a cache
+        # that already contains later sessions.
+        response_dates = [
+            pd.Timestamp(frame["time"].max()).date()
+            for frame in frames.values()
+            if not frame.empty
+        ]
+        if response_dates:
+            counts = Counter(response_dates)
+            latest_market_date = max(
+                counts,
+                key=lambda value: (counts[value], value),
+            )
+        else:
+            latest_market_date = store.latest_date(on_or_before=end_date)
+
         candidates: list[dict[str, Any]] = []
+        stale_symbols: list[str] = []
         pattern_config = AccumulationConfig(
             min_bars=config.min_bars,
             min_average_value_vnd=config.min_average_value_vnd,
@@ -167,22 +249,58 @@ def run_scan(
             frame = store.load_symbol(symbol)
             if frame.empty:
                 continue
-            candidates.extend(scan_symbol(frame, config=pattern_config))
+            known_frame = frame
+            if latest_market_date:
+                known_frame = frame.loc[
+                    pd.to_datetime(frame["time"], errors="coerce")
+                    <= pd.Timestamp(latest_market_date)
+                ].copy()
+                if (
+                    known_frame.empty
+                    or pd.Timestamp(known_frame["time"].max()).date()
+                    != latest_market_date
+                ):
+                    stale_symbols.append(symbol)
+                    continue
+            candidates.extend(
+                scan_symbol(
+                    known_frame,
+                    config=pattern_config,
+                    as_of=latest_market_date,
+                )
+            )
         candidates.sort(key=lambda row: (-float(row["setup_score"]), row["symbol"], row["pattern_id"]))
         candidates = candidates[: config.max_results]
         for candidate in candidates:
-            candidate["source"] = source_by_symbol.get(candidate["symbol"], "cached")
+            candidate["source"] = source_by_symbol.get(
+                candidate["symbol"],
+                candidate.get("source", "cached"),
+            )
         validate_candidates(candidates)
         store.queue_candidates(candidates)
 
-        latest_market_date = store.latest_date()
         previous_market_date = store.last_successful_market_date()
+        pending_candidates = (
+            store.pending_candidates(latest_market_date)
+            if latest_market_date
+            else []
+        )
         warnings = [
             f"Không tải được {len(errors)}/{len(symbols)} mã" if errors else "",
+            (
+                f"Loại {len(stale_symbols)} mã không có bar ở phiên "
+                f"{latest_market_date}"
+                if stale_symbols
+                else ""
+            ),
             *[f"Nguồn {source} bị loại: {reason}" for source, reason in rejected.items()],
         ]
         if latest_market_date and previous_market_date == latest_market_date:
-            warnings.append("Không có phiên giao dịch mới; bỏ qua gửi lặp")
+            warnings.append(
+                "Không có phiên giao dịch mới; gửi lại thông báo đang chờ"
+                if pending_candidates
+                else "Không có phiên giao dịch mới; bỏ qua gửi lặp"
+            )
 
         metadata = {
             "run_id": run_id,
@@ -193,57 +311,114 @@ def run_scan(
             "universe_count": len(symbols),
             "symbols_downloaded": len(frames),
             "symbols_failed": len(errors),
+            "refresh_ratio": round(refresh_ratio, 4),
+            "stale_symbols": stale_symbols,
             "seed": seed,
             "workers": workers,
             "sources": supported,
+            "listing_source": listing_source,
             "source_snapshots": pool.snapshots(),
             "rejected_sources": rejected,
             "errors": errors,
             "candidate_count": len(candidates),
+            "pending_notification_count": len(pending_candidates),
             "causal_only": True,
         }
-        paths = write_reports(candidates, output_dir=config.output_dir, metadata=metadata)
 
+        notification_candidates = pending_candidates or candidates
         fallback = deterministic_message(
-            candidates,
+            notification_candidates,
             as_of=latest_market_date or scan_date,
             warnings=warnings,
         )
         message = fallback
-        if config.gemini_runtime_enabled:
-            message = GeminiSummarizer(
-                config.gemini_api_key, model=config.gemini_model
-            ).summarize(
-                candidates,
-                as_of=(latest_market_date or scan_date).isoformat(),
-                fallback=fallback,
-            )
-
         should_notify = (
             not no_notify
             and not config.telegram_disable_notification
             and config.telegram_enabled
             and bool(latest_market_date)
-            and (previous_market_date != latest_market_date or bool(store.pending_candidates(scan_date)))
+            and (
+                previous_market_date != latest_market_date
+                or bool(pending_candidates)
+            )
         )
+        if (
+            should_notify
+            and use_gemini
+            and config.gemini_runtime_enabled
+        ):
+            try:
+                intro = build_ai_intro(
+                    notification_candidates,
+                    api_key=config.gemini_api_key,
+                    model=config.gemini_model,
+                )
+            except Exception as exc:  # noqa: BLE001 - optional wording layer
+                LOGGER.warning(
+                    "Gemini không khả dụng; dùng bản tin deterministic (%s)",
+                    type(exc).__name__,
+                )
+            else:
+                # AI may only add an intro. The calculated facts, warnings and
+                # disclaimer below remain deterministic and authoritative.
+                message = intro.rstrip() + "\n\n" + fallback
+
         telegram_sent = False
+        telegram_chunks = 0
+        telegram_error: str | None = None
         if should_notify:
             sender = TelegramSender(config.telegram_bot_token, config.telegram_chat_id)
-            sender.send(message)
-            store.mark_sent(candidates)
-            telegram_sent = True
+            try:
+                telegram_chunks = sender.send(message)
+            except TelegramSendError as exc:
+                telegram_error = str(exc)
+            else:
+                store.mark_sent(pending_candidates)
+                telegram_sent = True
+
+        run_status = "notification_failed" if telegram_error else "success"
+        metadata.update(
+            {
+                "notification_requested": not no_notify,
+                "notification_eligible": should_notify,
+                "telegram_sent": telegram_sent,
+                "telegram_chunks": telegram_chunks,
+                "telegram_error": telegram_error,
+            }
+        )
+        paths = write_reports(
+            candidates,
+            output_dir=config.output_dir,
+            metadata=metadata,
+            telegram_message=message,
+        )
 
         store.finish_run(
             run_id,
-            status="success",
+            status=run_status,
             latest_market_date=latest_market_date,
             symbols_downloaded=len(frames),
             candidates=len(candidates),
             metadata=metadata,
         )
         store.quick_check()
+        state_marker = config.output_dir / "state_verified.json"
+        state_marker.write_text(
+            json.dumps(
+                {
+                    "run_id": run_id,
+                    "status": run_status,
+                    "database_quick_check": "ok",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        paths["state_verified"] = state_marker
         return {
-            "status": "success",
+            "status": run_status,
             "run_id": run_id,
             "symbols": len(symbols),
             "downloaded": len(frames),
@@ -251,6 +426,8 @@ def run_scan(
             "candidates": len(candidates),
             "latest_market_date": latest_market_date.isoformat() if latest_market_date else None,
             "telegram_sent": telegram_sent,
+            "telegram_chunks": telegram_chunks,
+            "telegram_error": telegram_error,
             "paths": {key: str(value) for key, value in paths.items()},
             "sources": pool.snapshots(),
         }
@@ -261,7 +438,7 @@ def run_scan(
             latest_market_date=store.latest_date(),
             symbols_downloaded=len(frames),
             candidates=0,
-            metadata={"error": f"{type(exc).__name__}: {exc}"},
+            metadata={"error": safe_exception_summary(exc)},
         )
         raise
 
@@ -281,6 +458,11 @@ def main() -> None:
     )
     parser.add_argument("--startup-jitter", action="store_true", help="Chờ ngẫu nhiên trước khi gọi API")
     parser.add_argument("--as-of", help="Ngày kết thúc YYYY-MM-DD (phục vụ kiểm thử/replay)")
+    parser.add_argument(
+        "--no-gemini",
+        action="store_true",
+        help="Không dùng lớp viết mở đầu Gemini",
+    )
     parser.add_argument("--validate-config", action="store_true", help="Chỉ kiểm tra cấu hình")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -294,8 +476,11 @@ def main() -> None:
         no_notify=args.no_notify or args.mode == "dry-run",
         force_bootstrap=args.mode == "bootstrap",
         startup_jitter=args.startup_jitter,
+        use_gemini=not args.no_gemini,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+    if summary["status"] == "notification_failed":
+        raise SystemExit(3)
 
 
 if __name__ == "__main__":

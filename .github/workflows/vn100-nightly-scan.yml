@@ -58,10 +58,10 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
           cache: pip
@@ -71,18 +71,45 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements.lock
 
       - name: Restore incremental OHLCV state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: data/vn100_ohlcv.sqlite
           key: vn100-state-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             vn100-state-v1-${{ runner.os }}-
 
+      - name: Validate VNStock production secret
+        if: env.SCAN_MODE != 'dry-run'
+        shell: bash
+        env:
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+        run: |
+          if [[ -z "$VNSTOCK_API_KEY" ]]; then
+            printf '::error::Missing GitHub Actions secret: VNSTOCK_API_KEY\n'
+            exit 2
+          fi
+
+      - name: Validate Telegram production secrets
+        if: env.SCAN_MODE != 'dry-run' && env.SCAN_NOTIFY == 'true'
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          missing=()
+          [[ -n "$TELEGRAM_BOT_TOKEN" ]] || missing+=("TELEGRAM_BOT_TOKEN")
+          [[ -n "$TELEGRAM_CHAT_ID" ]] || missing+=("TELEGRAM_CHAT_ID")
+          if (( ${#missing[@]} )); then
+            printf '::error::Missing GitHub Actions secrets: %s\n' "${missing[*]}"
+            exit 2
+          fi
+
       - name: Validate configuration
         run: python -m scanner.run_vn100_nightly_scan --validate-config
 
-      - id: scan
+      - id: scan_notify
         name: Download, scan, and notify
+        if: env.SCAN_NOTIFY == 'true' && env.SCAN_MODE != 'dry-run'
         shell: bash
         env:
           VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
@@ -90,27 +117,49 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          if [[ "$SCAN_NOTIFY" == "true" && "$SCAN_MODE" != "dry-run" ]]; then
-            python -m scanner.run_vn100_nightly_scan \
-              --mode "$SCAN_MODE" \
-              --startup-jitter
-          else
-            python -m scanner.run_vn100_nightly_scan \
-              --mode "$SCAN_MODE" \
-              --startup-jitter \
-              --no-notify
-          fi
+          runtime_home="$(mktemp -d "$RUNNER_TEMP/vnstock-home.XXXXXX")"
+          case "$runtime_home" in
+            "$RUNNER_TEMP"/vnstock-home.*) ;;
+            *) printf '::error::Unsafe temporary HOME path\n'; exit 2 ;;
+          esac
+          cleanup() { rm -rf -- "$runtime_home"; }
+          trap cleanup EXIT
+          export HOME="$runtime_home"
+          python -m scanner.run_vn100_nightly_scan \
+            --mode "$SCAN_MODE" \
+            --startup-jitter
+
+      - id: scan_no_notify
+        name: Download and scan without notification
+        if: env.SCAN_NOTIFY != 'true' || env.SCAN_MODE == 'dry-run'
+        shell: bash
+        env:
+          VNSTOCK_API_KEY: ${{ secrets.VNSTOCK_API_KEY }}
+        run: |
+          runtime_home="$(mktemp -d "$RUNNER_TEMP/vnstock-home.XXXXXX")"
+          case "$runtime_home" in
+            "$RUNNER_TEMP"/vnstock-home.*) ;;
+            *) printf '::error::Unsafe temporary HOME path\n'; exit 2 ;;
+          esac
+          cleanup() { rm -rf -- "$runtime_home"; }
+          trap cleanup EXIT
+          export HOME="$runtime_home"
+          python -m scanner.run_vn100_nightly_scan \
+            --mode "$SCAN_MODE" \
+            --startup-jitter \
+            --no-notify \
+            --no-gemini
 
       - name: Save newest verified state
-        if: steps.scan.outcome == 'success'
-        uses: actions/cache/save@v4
+        if: always() && hashFiles('artifacts/live_scan/latest/state_verified.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: data/vn100_ohlcv.sqlite
           key: vn100-state-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload scan report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: vn100-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/live_scan/latest/

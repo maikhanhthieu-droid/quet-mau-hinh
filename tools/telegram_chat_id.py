@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import getpass
 import os
 import sys
 
@@ -11,16 +12,34 @@ import requests
 def main() -> int:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     if not token:
-        print("Thiếu TELEGRAM_BOT_TOKEN trong biến môi trường.", file=sys.stderr)
+        token = getpass.getpass("Telegram bot token mới (không hiển thị): ").strip()
+    if not token:
+        print("Thiếu TELEGRAM_BOT_TOKEN.", file=sys.stderr)
         return 2
     # Never print/log this URL; it embeds the bot token.
-    response = requests.get(
-        f"https://api.telegram.org/bot{token}/getUpdates",
-        timeout=30,
-    )
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            f"https://api.telegram.org/bot{token}/getUpdates",
+            timeout=30,
+        )
+    except requests.RequestException:
+        # requests exception text can contain the token-bearing URL.
+        print("Không kết nối được Telegram Bot API.", file=sys.stderr)
+        return 3
+    if not 200 <= response.status_code < 300:
+        print(
+            f"Telegram trả về HTTP {response.status_code}; "
+            "kiểm tra token mới rồi thử lại.",
+            file=sys.stderr,
+        )
+        return 3
+    try:
+        payload = response.json()
+    except (ValueError, TypeError):
+        print("Telegram trả về JSON không hợp lệ.", file=sys.stderr)
+        return 3
     chats: dict[str, str] = {}
-    for update in response.json().get("result", []):
+    for update in payload.get("result", []):
         message = update.get("message") or update.get("channel_post") or {}
         chat = message.get("chat") or {}
         chat_id = chat.get("id")

@@ -91,6 +91,15 @@ def _status_code(exc: BaseException) -> int | None:
         return None
 
 
+def safe_exception_summary(exc: BaseException) -> str:
+    """Return a metadata-safe error label with no URL/body/header text."""
+
+    root = _root_exception(exc)
+    name = type(root).__name__
+    status = _status_code(root)
+    return f"{name} (HTTP {status})" if status is not None else name
+
+
 @dataclass
 class SlidingWindowLimiter:
     """Thread-safe rolling one-minute request budget."""
@@ -192,9 +201,10 @@ class SourceState:
             if self.consecutive_failures >= 2:
                 cooldown = max(cooldown, self.recover_after_sec)
             if retry_after is not None:
-                # If the server asks for a delay above our maximum blocking
-                # wait, quarantine the source for the full requested period
-                # and let another source take over.  Never retry early.
+                # Never retry this provider earlier than its Retry-After.
+                # ``retry_after_max_sec`` caps how long a worker may block
+                # waiting; longer delays quarantine this source while another
+                # source handles work.
                 cooldown = max(cooldown, retry_after)
             self.cooldown_until = max(self.cooldown_until, now + cooldown)
 
@@ -305,42 +315,64 @@ class SourcePool(Generic[T]):
         """Run once on a balanced source, failing over only after an error."""
 
         errors: list[str] = []
-        attempted: set[str] = set()
-        attempts_remaining = max(
+        attempted_round: set[str] = set()
+        permanently_excluded: set[str] = set()
+        max_attempts = max(
             self.config.request_attempts, len(self.states)
         )
+        attempts_made = 0
 
-        while attempts_remaining > 0:
-            attempts_remaining -= 1
+        while attempts_made < max_attempts:
             candidates = [
                 state
                 for state in self._ordered_candidates(preferred)
-                if state.name not in attempted and state.ready_in() <= 0
+                if state.name not in permanently_excluded
+                and state.name not in attempted_round
+                and state.ready_in() <= 0
             ]
             if not candidates:
-                # Do not make every worker sleep through a long circuit-open
-                # interval.  A short wait is acceptable; otherwise surface the
-                # failure so the caller can proceed with other symbols.
-                waiting = [
-                    state.ready_in()
+                eligible = [
+                    state
                     for state in self.states.values()
-                    if state.enabled and state.name not in attempted
+                    if state.enabled and state.name not in permanently_excluded
                 ]
-                finite = [value for value in waiting if value != float("inf")]
+                if not eligible:
+                    break
+
+                ready = [state for state in eligible if state.ready_in() <= 0]
+                if ready and all(
+                    state.name in attempted_round for state in ready
+                ):
+                    # A new retry round is allowed while the total outbound
+                    # request count remains below SCAN_REQUEST_ATTEMPTS.
+                    attempted_round.clear()
+                    continue
+
+                # Do not make every worker sleep through a long circuit-open
+                # interval. A short wait is acceptable; a longer one leaves
+                # this source quarantined for other calls and fails this symbol.
+                finite = [
+                    state.ready_in()
+                    for state in eligible
+                    if state.ready_in() != float("inf")
+                ]
                 if finite and min(finite) <= self.config.retry_after_max_sec:
                     self.sleeper(max(0.001, min(finite)))
+                    attempted_round.clear()
                     continue
                 break
 
             state = candidates[0]
-            attempted.add(state.name)
+            attempted_round.add(state.name)
             try:
                 state.before_request()
+                attempts_made += 1
                 result = operation(state.name)
             except SourceDisabled as exc:
                 errors.append(str(exc))
                 continue
             except SourceNeutralError as exc:
+                permanently_excluded.add(state.name)
                 errors.append(f"{state.name}: {type(exc).__name__}")
                 continue
             except Exception as exc:  # noqa: BLE001 - provider exceptions vary

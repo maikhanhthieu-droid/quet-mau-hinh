@@ -100,7 +100,8 @@ class LiveScanStore:
             )
             conn.commit()
 
-    def upsert_bars(self, frame: pd.DataFrame) -> int:
+    @staticmethod
+    def _bar_rows(frame: pd.DataFrame) -> list[tuple[Any, ...]]:
         required = {
             "symbol",
             "time",
@@ -115,10 +116,10 @@ class LiveScanStore:
         if missing:
             raise StorageError(f"Thiếu cột OHLCV: {', '.join(missing)}")
         if frame.empty:
-            return 0
+            return []
 
         updated_at = datetime.now(timezone.utc).isoformat()
-        rows = [
+        return [
             (
                 str(row.symbol).upper(),
                 pd.Timestamp(row.time).date().isoformat(),
@@ -132,6 +133,11 @@ class LiveScanStore:
             )
             for row in frame.itertuples(index=False)
         ]
+
+    def upsert_bars(self, frame: pd.DataFrame) -> int:
+        rows = self._bar_rows(frame)
+        if not rows:
+            return 0
         with self.connect() as conn:
             conn.executemany(
                 """
@@ -152,27 +158,79 @@ class LiveScanStore:
             conn.commit()
         return len(rows)
 
-    def latest_date(self, symbol: str | None = None) -> date | None:
+    def replace_symbol_history(self, frame: pd.DataFrame) -> int:
+        """Atomically replace one symbol when failover changes data provider."""
+
+        rows = self._bar_rows(frame)
+        if not rows:
+            return 0
+        symbols = {str(row[0]).upper() for row in rows}
+        sources = {str(row[7]).upper() for row in rows}
+        if len(symbols) != 1 or len(sources) != 1:
+            raise StorageError(
+                "replace_symbol_history yêu cầu đúng một mã và một nguồn"
+            )
+        symbol = next(iter(symbols))
+        with self.connect() as conn:
+            conn.execute(
+                "DELETE FROM stock_price_history WHERE symbol = ?",
+                (symbol,),
+            )
+            conn.executemany(
+                """
+                INSERT INTO stock_price_history(
+                    symbol, time, open, high, low, close, volume, source, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+            conn.commit()
+        return len(rows)
+
+    def latest_date(
+        self,
+        symbol: str | None = None,
+        *,
+        on_or_before: date | None = None,
+    ) -> date | None:
         query = "SELECT MAX(time) FROM stock_price_history"
-        params: tuple[Any, ...] = ()
+        clauses: list[str] = []
+        params: list[Any] = []
         if symbol:
-            query += " WHERE symbol = ?"
-            params = (str(symbol).upper(),)
+            clauses.append("symbol = ?")
+            params.append(str(symbol).upper())
+        if on_or_before:
+            clauses.append("time <= ?")
+            params.append(on_or_before.isoformat())
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
         with self.connect() as conn:
             value = conn.execute(query, params).fetchone()[0]
         return date.fromisoformat(value) if value else None
 
-    def latest_source(self, symbol: str) -> str | None:
+    def latest_source(
+        self,
+        symbol: str,
+        *,
+        on_or_before: date | None = None,
+    ) -> str | None:
+        cutoff_clause = "AND time <= ?" if on_or_before else ""
+        params: tuple[Any, ...] = (
+            (str(symbol).upper(), on_or_before.isoformat())
+            if on_or_before
+            else (str(symbol).upper(),)
+        )
         with self.connect() as conn:
             row = conn.execute(
-                """
+                f"""
                 SELECT source
                 FROM stock_price_history
                 WHERE symbol = ?
+                {cutoff_clause}
                 ORDER BY time DESC
                 LIMIT 1
                 """,
-                (str(symbol).upper(),),
+                params,
             ).fetchone()
         return str(row[0]).upper() if row else None
 

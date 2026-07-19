@@ -15,6 +15,7 @@ def write_reports(
     *,
     output_dir: Path,
     metadata: Mapping[str, Any],
+    telegram_message: str | None = None,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     rows = [dict(candidate) for candidate in candidates]
@@ -23,6 +24,7 @@ def write_reports(
     csv_path = output_dir / "signals.csv"
     md_path = output_dir / "signals.md"
     meta_path = output_dir / "run_metadata.json"
+    telegram_path = output_dir / "telegram_message.txt"
     json_path.write_text(
         json.dumps(rows, ensure_ascii=False, indent=2, default=str) + "\n",
         encoding="utf-8",
@@ -58,12 +60,19 @@ def write_reports(
         json.dumps(dict(metadata), ensure_ascii=False, indent=2, default=str) + "\n",
         encoding="utf-8",
     )
-    return {
+    paths = {
         "json": json_path,
         "csv": csv_path,
         "markdown": md_path,
         "metadata": meta_path,
     }
+    if telegram_message is not None:
+        telegram_path.write_text(
+            str(telegram_message).rstrip() + "\n",
+            encoding="utf-8",
+        )
+        paths["telegram"] = telegram_path
+    return paths
 
 
 def deterministic_message(
