@@ -24,7 +24,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: vn100-nightly-production
@@ -54,6 +54,10 @@ jobs:
       SCAN_OUTPUT_DIR: artifacts/live_scan/latest
       SCAN_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'incremental' }}
       SCAN_NOTIFY: ${{ github.event_name == 'schedule' || inputs.notify }}
+      THIUCUBU_ENABLED: "1"
+      THIUCUBU_MAX_AGE_DAYS: "3"
+      THIUCUBU_ENFORCE: "0"
+      AI_REVIEW_ENABLED: "1"
       GITHUB_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
@@ -116,6 +120,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
         run: |
           runtime_home="$(mktemp -d "$RUNNER_TEMP/vnstock-home.XXXXXX")"
           case "$runtime_home" in
@@ -165,3 +171,16 @@ jobs:
           path: artifacts/live_scan/latest/
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Publish deterministic pattern feed
+        if: success() && hashFiles('artifacts/live_scan/latest/pattern_feed_latest.json') != ''
+        shell: bash
+        run: |
+          mkdir -p data
+          cp artifacts/live_scan/latest/pattern_feed_latest.json data/pattern_feed_latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pattern_feed_latest.json
+          git diff --cached --quiet && exit 0
+          git commit -m "data: update deterministic pattern feed"
+          git push

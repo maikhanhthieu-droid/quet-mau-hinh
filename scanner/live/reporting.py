@@ -16,6 +16,7 @@ def write_reports(
     output_dir: Path,
     metadata: Mapping[str, Any],
     telegram_message: str | None = None,
+    ai_pattern_review: Mapping[str, Any] | None = None,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     rows = [dict(candidate) for candidate in candidates]
@@ -25,6 +26,8 @@ def write_reports(
     md_path = output_dir / "signals.md"
     meta_path = output_dir / "run_metadata.json"
     telegram_path = output_dir / "telegram_message.txt"
+    ai_review_path = output_dir / "ai_pattern_review.json"
+    feed_path = output_dir / "pattern_feed_latest.json"
     json_path.write_text(
         json.dumps(rows, ensure_ascii=False, indent=2, default=str) + "\n",
         encoding="utf-8",
@@ -66,12 +69,37 @@ def write_reports(
         "markdown": md_path,
         "metadata": meta_path,
     }
+    feed = {
+        "schema_version": "chart-patterns.facts.v1",
+        "producer": "maikhanhthieu-droid/quet-mau-hinh",
+        "generated_at": metadata.get("finished_at") or metadata.get("scan_date"),
+        "as_of": metadata.get("as_of_date"),
+        "status": "ok" if metadata.get("as_of_date") else "missing",
+        "facts": rows,
+        "quality": {
+            "facts_only": True,
+            "ai_output_included": False,
+            "causal_only": bool(metadata.get("causal_only", True)),
+            "candidate_contract_validated": True,
+        },
+    }
+    feed_path.write_text(
+        json.dumps(feed, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+    paths["pattern_feed"] = feed_path
     if telegram_message is not None:
         telegram_path.write_text(
             str(telegram_message).rstrip() + "\n",
             encoding="utf-8",
         )
         paths["telegram"] = telegram_path
+    if ai_pattern_review is not None:
+        ai_review_path.write_text(
+            json.dumps(dict(ai_pattern_review), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        paths["ai_pattern_review"] = ai_review_path
     return paths
 
 

@@ -55,6 +55,15 @@ Historical comparison only:
 CHARTPATTERNSCAN_ALLOW_LEGACY_SCANNER=1 python3 scanner/run_full_scan.py ...
 ```
 
+## Optional analysis lanes
+
+- The OHLCV scanner is the primary lane and remains runnable by itself.
+- THIUCUBU is an advisory regime/flow/risk signal by default.
+- GPT and GLM independently review supplied chart-pattern facts; they cannot edit values or add symbols.
+- Gemini only supplies context wording; provider quota/network errors do not fail the scan.
+- Set `THIUCUBU_ENFORCE=1` only when the stricter THIUCUBU gate is explicitly desired.
+- Cross-repo consumers use `data/pattern_feed_latest.json`; AI reviews remain in a separate artifact and never enter this facts feed.
+
 ## Kiến trúc
 
 - Legacy logic, quarantined for historical comparison:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -140,3 +141,6 @@ def test_smoke_message_and_report_artifact(tmp_path) -> None:
         telegram_message=message,
     )
     assert paths["telegram"].read_text(encoding="utf-8").strip() == message
+    feed = json.loads(paths["pattern_feed"].read_text(encoding="utf-8"))
+    assert feed["schema_version"] == "chart-patterns.facts.v1"
+    assert feed["quality"]["ai_output_included"] is False

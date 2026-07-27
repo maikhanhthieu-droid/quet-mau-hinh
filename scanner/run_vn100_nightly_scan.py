@@ -32,6 +32,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scanner.live.config import LiveScanConfig  # noqa: E402
+from scanner.live.ai_pattern_review import build_ai_pattern_review  # noqa: E402
 from scanner.live.contracts import validate_candidates  # noqa: E402
 from scanner.live.gemini_summary import build_ai_intro  # noqa: E402
 from scanner.live.patterns import AccumulationConfig, scan_symbol  # noqa: E402
@@ -43,6 +44,11 @@ from scanner.live.source_pool import (  # noqa: E402
 )
 from scanner.live.storage import LiveScanStore  # noqa: E402
 from scanner.live.telegram import TelegramSendError, TelegramSender  # noqa: E402
+from scanner.live.thieucubu_gate import (  # noqa: E402
+    ThieucubuGateError,
+    fetch_report as fetch_thieucubu_report,
+    filter_candidates as filter_with_thieucubu,
+)
 from scanner.live.vnstock_adapter import (  # noqa: E402
     VnstockAdapter,
     VnstockAdapterError,
@@ -277,6 +283,31 @@ def run_scan(
                 candidate.get("source", "cached"),
             )
         validate_candidates(candidates)
+        thieucubu_metadata: dict[str, Any] = {"status": "disabled"}
+        if config.thieucubu_enabled:
+            try:
+                candidates, thieucubu_metadata = filter_with_thieucubu(
+                    candidates,
+                    fetch_thieucubu_report(config.thieucubu_url),
+                    as_of=latest_market_date or scan_date,
+                    max_age_days=config.thieucubu_max_age_days,
+                    enforce=config.thieucubu_enforce,
+                )
+            except ThieucubuGateError as exc:
+                thieucubu_metadata = {"status": "unavailable", "reason": str(exc)}
+                # Keep deterministic scanner output when this optional source
+                # is down, stale, or rate-limited.
+        ai_pattern_review = (
+            build_ai_pattern_review(
+                candidates,
+                openai_api_key=config.openai_api_key,
+                openai_model=config.openai_model,
+                zai_api_key=config.zai_api_key,
+                zai_model=config.zai_model,
+            )
+            if config.ai_review_enabled
+            else {"input_symbols": [], "providers": [], "consensus": "disabled"}
+        )
         store.queue_candidates(candidates)
 
         previous_market_date = store.last_successful_market_date()
@@ -321,6 +352,14 @@ def run_scan(
             "rejected_sources": rejected,
             "errors": errors,
             "candidate_count": len(candidates),
+            "thieucubu_gate": thieucubu_metadata,
+            "ai_pattern_review": {
+                "providers": [
+                    {"provider": item["provider"], "status": item["status"]}
+                    for item in ai_pattern_review["providers"]
+                ],
+                "consensus": ai_pattern_review["consensus"],
+            },
             "pending_notification_count": len(pending_candidates),
             "causal_only": True,
         }
@@ -391,6 +430,7 @@ def run_scan(
             output_dir=config.output_dir,
             metadata=metadata,
             telegram_message=message,
+            ai_pattern_review=ai_pattern_review,
         )
 
         store.finish_run(

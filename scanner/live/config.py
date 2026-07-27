@@ -138,6 +138,15 @@ class LiveScanConfig:
     gemini_api_key: str = field(default="", repr=False)
     gemini_model: str = "gemini-3.1-flash-lite"
     gemini_enabled: bool = True
+    thieucubu_enabled: bool = False
+    thieucubu_url: str = "https://raw.githubusercontent.com/maikhanhthieu-droid/THIUCUBU/main/data/filter_feed_latest.json"
+    thieucubu_max_age_days: int = 3
+    thieucubu_enforce: bool = False
+    ai_review_enabled: bool = False
+    openai_api_key: str = field(default="", repr=False)
+    openai_model: str = "gpt-4.1-mini"
+    zai_api_key: str = field(default="", repr=False)
+    zai_model: str = "glm-4.5-air"
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "LiveScanConfig":
@@ -240,6 +249,20 @@ class LiveScanConfig:
                 "GEMINI_MODEL", "gemini-3.1-flash-lite"
             ).strip(),
             gemini_enabled=_env_bool(env, "GEMINI_ENABLED", True),
+            thieucubu_enabled=_env_bool(env, "THIUCUBU_ENABLED", False),
+            thieucubu_url=env.get(
+                "THIUCUBU_REPORT_URL",
+                "https://raw.githubusercontent.com/maikhanhthieu-droid/THIUCUBU/main/data/filter_feed_latest.json",
+            ).strip(),
+            thieucubu_max_age_days=_env_int(
+                env, "THIUCUBU_MAX_AGE_DAYS", 3, minimum=0
+            ),
+            thieucubu_enforce=_env_bool(env, "THIUCUBU_ENFORCE", False),
+            ai_review_enabled=_env_bool(env, "AI_REVIEW_ENABLED", False),
+            openai_api_key=env.get("OPENAI_API_KEY", "").strip(),
+            openai_model=env.get("OPENAI_MODEL", "gpt-4.1-mini").strip(),
+            zai_api_key=env.get("ZAI_API_KEY", "").strip(),
+            zai_model=env.get("ZAI_MODEL", "glm-4.5-air").strip(),
         )
 
     def configured_limit(self, source: str) -> int:

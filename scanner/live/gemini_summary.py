@@ -73,6 +73,11 @@ def build_ai_intro(
     forbidden = ("chắc chắn", "cam kết", "mua ngay", "bán ngay", "lợi nhuận")
     if any(term in lowered for term in forbidden):
         raise GeminiSummaryError("Gemini tạo nội dung mang tính khuyến nghị")
+    numeric_claim_check = re.sub(r"\bVN100\b", "", text, flags=re.IGNORECASE)
+    if re.search(r"\d", numeric_claim_check):
+        raise GeminiSummaryError(
+            "Gemini thêm số ngoài phần dữ kiện deterministic"
+        )
     mentioned = set(re.findall(r"(?<![A-Z0-9])[A-Z]{2,5}(?![A-Z0-9])", text))
     # This is only a soft hallucination check: ignore ordinary Vietnamese
     # words, but reject an obvious all-uppercase ticker not in the facts.
