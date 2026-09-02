@@ -1,7 +1,7 @@
 {
   "schema_version": "chart-patterns.facts.v1",
   "producer": "maikhanhthieu-droid/quet-mau-hinh",
-  "generated_at": "2026-09-02",
+  "generated_at": "2026-09-03",
   "as_of": "2026-08-28",
   "status": "ok",
   "facts": [
